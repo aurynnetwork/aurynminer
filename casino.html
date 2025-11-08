@@ -24,7 +24,7 @@ th,td{border-bottom:1px solid #222;padding:8px;text-align:left}
   <a href="wallet.html" style="color:#0f0;">Wallet</a>
 </header>
 
-<p class="small">Minimum bet: <strong>0.01 📀 AdAu</strong> — winnings and losses change your mining balance.</p>
+<p class="small">Minimum bet: <strong>0.01 📀 Auryn</strong> — winnings and losses change your mining balance.</p>
 
 <p>Device ID: <strong id="deviceId">—</strong></p>
 <p>Balance: 📀 <strong id="balance">0.000000</strong></p>
@@ -39,7 +39,7 @@ th,td{border-bottom:1px solid #222;padding:8px;text-align:left}
 </div>
 
 <div>
-  <label>Bet Amount (AdAu):</label>
+  <label>Bet Amount (Auryn):</label>
   <input id="bet" type="number" step="0.01" min="0.01" value="0.01">
 </div>
 
@@ -109,13 +109,13 @@ if(!localStorage.casino_bonus_given){
   setBalance(bal);
   localStorage.casino_bonus_given='1';
   addHistory({t:Date.now(),game:'casino_bonus',bet:0,delta:9.0,result:'🎁 Welcome Bonus'});
-  alert('🎁 Welcome! You received a 9.0 AdAu bonus.');
+  alert('🎁 Welcome! You received a 9.0 Auryn📀 bonus.');
 }
 
 // ---- Play button ----
 document.getElementById('playBtn').onclick=()=>{
  const bet=parseFloat(document.getElementById('bet').value);
- if(isNaN(bet)||bet<0.01){alert('Minimum bet is 0.01 AdAu');return;}
+ if(isNaN(bet)||bet<0.01){alert('Minimum bet is 0.01 📀');return;}
  let bal=getBalance();
  if(bet>bal){alert('Not enough balance');return;}
 
@@ -131,7 +131,7 @@ document.getElementById('playBtn').onclick=()=>{
  const entry={t:Date.now(),game,bet,delta:res.delta,result:res.result};
  addHistory(entry);
 
- resultEl.textContent=`${res.result} — ${res.delta>0?'+':''}${res.delta.toFixed(6)} AdAu`;
+ resultEl.textContent=`${res.result} — ${res.delta>0?'+':''}${res.delta.toFixed(6)} Auryn`;
  resultEl.style.color=res.delta>=0?'#0f0':'#f33';
 
  loadHistory();
