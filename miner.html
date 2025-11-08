@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🖥️ </title>
+<style>
+body{background:#000;color:#fff;font-family:system-ui,Segoe UI,Roboto,Arial;padding:18px;max-width:680px;margin:auto}
+button{padding:10px 14px;margin:6px;border-radius:8px;border:1px solid #333;cursor:pointer;font-weight:bold}
+#startMine{background:#0f0;color:#000;}
+#stopMine{background:#f00;color:#fff;}
+header{display:flex;justify-content:space-between;align-items:center}
+h1{margin:0 0 12px 0;}
+.small{color:#aaa;font-size:0.9rem}
+</style>
+</head>
+<body>
+<header>
+  <h1></h1>
+  <a href="wallet.html" style="color:#0f0;">Wallet</a>
+</header>
+<p class="small">🖥️MINER : Mining gives <strong>+0.000003</strong> coins per second for 9 hours. After that you must start again.</p>
+
+<p>Status: <strong id="status">—</strong></p>
+<p>Time left: <strong id="timeleft">—</strong></p>
+<button id="startMine">Start Mining (9h)</button>
+<button id="stopMine">Stop Mining</button>
+
+<hr>
+<p>Balance: 📀 <strong id="balance">0.000000</strong></p>
+
+<script>
+const MINING_RATE = 0.000003;
+const MINING_DURATION_MS = 9 * 60 * 60 * 1000;
+
+if(!localStorage.device_id)localStorage.device_id='dev-'+Math.random().toString(36).slice(2,11);
+if(!localStorage.wallet_balance)localStorage.wallet_balance='0';
+if(!localStorage.last_update)localStorage.last_update=Date.now();
+
+function now(){return Date.now();}
+
+function msToHMS(ms){
+ if(ms<=0)return'0s';
+ const s=Math.floor(ms/1000);
+ const h=Math.floor(s/3600);
+ const m=Math.floor((s%3600)/60);
+ const sec=s%60;
+ return `${h}h ${m}m ${sec}s`;
+}
+
+function updateMining(){
+ const t=now();
+ const last=parseInt(localStorage.last_update||t);
+ let bal=parseFloat(localStorage.wallet_balance||0);
+ const end=parseInt(localStorage.mining_end||0);
+ const boostEnd=parseInt(localStorage.boost_end||0);
+
+ const elapsed=(t-last)/1000;
+ let rate=0;
+ if(t<end)rate+=MINING_RATE;
+ if(t<boostEnd)rate+=0.00003;
+
+ const delta=rate*elapsed;
+ if(delta>0){
+   bal+=delta;
+   const dev=localStorage.device_id;
+   const key='wallet_history_'+dev;
+   let hist=[];
+   try{hist=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){}
+   hist.push({t,added:Number(delta.toFixed(8)),reason:(t<end?'mining':'')+(t<boostEnd?'+adboost':'')});
+   localStorage.setItem(key,JSON.stringify(hist));
+ }
+ localStorage.wallet_balance=bal;
+ localStorage.last_update=t;
+ document.getElementById('balance').textContent=bal.toFixed(6);
+ const s=document.getElementById('status');
+ const tl=document.getElementById('timeleft');
+ if(t<end){s.textContent='Mining';tl.textContent=msToHMS(end-t);}else{s.textContent='Stopped';tl.textContent='0s';}
+}
+document.getElementById('startMine').onclick=()=>{
+ const t=now();
+ localStorage.mining_end=t+MINING_DURATION_MS;
+ localStorage.last_update=t;
+ const dev=localStorage.device_id;
+ const key='wallet_history_'+dev;
+ let hist=[];
+ try{hist=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){}
+ hist.push({t,event:'mining_started',until:t+MINING_DURATION_MS});
+ localStorage.setItem(key,JSON.stringify(hist));
+ updateMining();
+};
+document.getElementById('stopMine').onclick=()=>{
+ const t=now();
+ localStorage.mining_end=t;
+ localStorage.last_update=t;
+ const dev=localStorage.device_id;
+ const key='wallet_history_'+dev;
+ let hist=[];
+ try{hist=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){}
+ hist.push({t,event:'mining_stopped'});
+ localStorage.setItem(key,JSON.stringify(hist));
+ updateMining();
+};
+setInterval(updateMining,1000);
+updateMining();
+</script>
+</body>
+</html>

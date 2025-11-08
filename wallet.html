@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>💽 Wallet</title>
+<style>
+body{background:#000;color:#fff;font-family:system-ui,Segoe UI,Roboto,Arial;padding:18px;max-width:900px;margin:auto}
+table{width:100%;border-collapse:collapse}
+th,td{border-bottom:1px solid #222;padding:8px;text-align:left}
+button{padding:8px 12px;margin:6px;border-radius:8px;border:1px solid #333;cursor:pointer}
+header{display:flex;justify-content:space-between;align-items:center}
+h1{margin:0 0 12px 0;}
+.small{color:#aaa;font-size:0.9rem}
+</style>
+</head>
+<body>
+<header>
+  
+  <a href="miner.html" style="color:#0f0;">Back</a>
+</header>
+<p class="small">💽WALLET:  Current balance and milestones for this device.</p>
+
+<p>Device ID: <strong id="deviceId">—</strong></p>
+<p>Balance: 📀 <strong id="balance">0.000000</strong></p>
+<p>Rate: <strong id="rate">0.000000</strong> /s</p>
+
+<h3>Whole 1.0 Mined Milestones</h3>
+<table><thead><tr><th>Time</th><th>📀 Count</th></tr></thead><tbody id="wholeBody"></tbody></table>
+
+<h3>Partial Progress</h3>
+<p id="partial"></p>
+
+<script>
+if(!localStorage.device_id)localStorage.device_id='dev-'+Math.random().toString(36).slice(2,11);
+if(!localStorage.wallet_balance)localStorage.wallet_balance='0';
+
+const device=localStorage.device_id;
+document.getElementById('deviceId').textContent=device;
+
+if(!localStorage.whole_milestones)localStorage.whole_milestones='[]';
+function updateWallet(){
+ let bal=parseFloat(localStorage.wallet_balance||0);
+ document.getElementById('balance').textContent=bal.toFixed(6);
+
+ // check if passed new whole
+ let milestones=JSON.parse(localStorage.whole_milestones||'[]');
+ let count=milestones.length;
+ while(bal>=count+1){
+   milestones.push({t:Date.now(),num:count+1});
+   count++;
+ }
+ localStorage.whole_milestones=JSON.stringify(milestones);
+
+ const tb=document.getElementById('wholeBody');
+ tb.innerHTML='';
+ for(const m of milestones.slice().reverse()){
+   const tr=document.createElement('tr');
+   tr.innerHTML=`<td>${new Date(m.t).toLocaleString()}</td><td>${m.num}</td>`;
+   tb.appendChild(tr);
+ }
+
+ const frac=bal%1;
+ const end=parseInt(localStorage.mining_end||0);
+ const boostEnd=parseInt(localStorage.boost_end||0);
+ const t=Date.now();
+ let rate=0;
+ if(t<end)rate+=0.000003;
+ if(t<boostEnd)rate+=0.00003;
+ document.getElementById('rate').textContent=rate.toFixed(6);
+ const needed=1-frac;
+ const timeToNext=(rate>0)?(needed/rate):Infinity;
+ document.getElementById('partial').textContent=`Fractional: ${frac.toFixed(6)} — Need ${needed.toFixed(6)} more (~${timeToNext===Infinity?'∞':(timeToNext/60).toFixed(2)+' min'})`;
+}
+setInterval(updateWallet,1000);
+updateWallet();
+</script>
+</body>
+</html>

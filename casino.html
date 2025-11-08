@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎰 Casino</title>
+<style>
+body{background:#000;color:#fff;font-family:system-ui,Segoe UI,Roboto,Arial;padding:18px;max-width:800px;margin:auto}
+header{display:flex;justify-content:space-between;align-items:center}
+h1{margin:0 0 12px 0;}
+.small{color:#aaa;font-size:0.9rem}
+button{padding:10px 14px;margin:6px;border-radius:8px;border:1px solid #333;cursor:pointer;font-weight:bold}
+.btn-play{background:#0f0;color:#000;}
+.btn-clear{background:#f00;color:#fff;}
+input,select{background:#111;border:1px solid #333;color:#fff;border-radius:8px;padding:8px}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{border-bottom:1px solid #222;padding:8px;text-align:left}
+.result{margin-top:12px;font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎰 Casino</h1>
+  <a href="wallet.html" style="color:#0f0;">Wallet</a>
+</header>
+
+<p class="small">Minimum bet: <strong>0.01 📀 AdAu</strong> — winnings and losses change your mining balance.</p>
+
+<p>Device ID: <strong id="deviceId">—</strong></p>
+<p>Balance: 📀 <strong id="balance">0.000000</strong></p>
+
+<div>
+  <label>Game:</label>
+  <select id="game">
+    <option value="coin">Coin Flip (Win 2x — 49%)</option>
+    <option value="slots">Slots (Variable multipliers)</option>
+    <option value="roulette">Roulette (Red/Black — 48.6%)</option>
+  </select>
+</div>
+
+<div>
+  <label>Bet Amount (AdAu):</label>
+  <input id="bet" type="number" step="0.01" min="0.01" value="0.01">
+</div>
+
+<button id="playBtn" class="btn-play">Play</button>
+<button id="clearBtn" class="btn-clear">Clear History</button>
+
+<div id="result" class="result"></div>
+
+<h3>Recent Bets</h3>
+<table>
+<thead><tr><th>Time</th><th>Game</th><th>Bet</th><th>Outcome</th><th>Δ Balance</th></tr></thead>
+<tbody id="historyBody"></tbody>
+</table>
+
+<script>
+// ---- Shared setup ----
+if(!localStorage.device_id)localStorage.device_id='dev-'+Math.random().toString(36).slice(2,11);
+if(!localStorage.wallet_balance)localStorage.wallet_balance='0';
+
+const device=localStorage.device_id;
+document.getElementById('deviceId').textContent=device;
+const balEl=document.getElementById('balance');
+const histEl=document.getElementById('historyBody');
+const resultEl=document.getElementById('result');
+
+function getBalance(){return parseFloat(localStorage.wallet_balance||0);}
+function setBalance(v){localStorage.wallet_balance=v;balEl.textContent=parseFloat(v).toFixed(6);}
+function addHistory(entry){
+ const key='wallet_history_'+device;
+ let h=[];
+ try{h=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){}
+ h.push(entry);
+ localStorage.setItem(key,JSON.stringify(h));
+}
+function loadHistory(){
+ const key='wallet_history_'+device;
+ let h=[];
+ try{h=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){}
+ histEl.innerHTML='';
+ for(const e of h.slice(-100).reverse()){
+   const tr=document.createElement('tr');
+   tr.innerHTML=`<td>${new Date(e.t).toLocaleString()}</td><td>${e.game||''}</td><td>${e.bet?e.bet.toFixed(4):''}</td><td>${e.result||''}</td><td>${e.delta>0?'+':''}${(e.delta||0).toFixed(6)}</td>`;
+   histEl.appendChild(tr);
+ }
+}
+
+function rand(){const u=new Uint32Array(1);crypto.getRandomValues(u);return u[0]/0xffffffff;}
+
+// ---- Casino games ----
+function playCoin(bet){const win=rand()<0.49;return {delta:win?bet:-bet,result:win?'Win':'Lose'};}
+function playRoulette(bet){const win=rand()<0.486;return {delta:win?bet:-bet,result:win?'Red/Black Win':'Lose'};}
+function playSlots(bet){
+  const r=rand();let mult=0;
+  if(r<0.60)mult=0;
+  else if(r<0.75)mult=0.5;
+  else if(r<0.90)mult=1;
+  else if(r<0.97)mult=2;
+  else if(r<0.995)mult=5;
+  else mult=10;
+  return {delta:bet*(mult-1),result:`Slots x${mult}`};
+}
+
+// ---- One-time bonus ----
+if(!localStorage.casino_bonus_given){
+  let bal=getBalance();
+  bal+=9.0;
+  setBalance(bal);
+  localStorage.casino_bonus_given='1';
+  addHistory({t:Date.now(),game:'casino_bonus',bet:0,delta:9.0,result:'🎁 Welcome Bonus'});
+  alert('🎁 Welcome! You received a 9.0 AdAu bonus.');
+}
+
+// ---- Play button ----
+document.getElementById('playBtn').onclick=()=>{
+ const bet=parseFloat(document.getElementById('bet').value);
+ if(isNaN(bet)||bet<0.01){alert('Minimum bet is 0.01 AdAu');return;}
+ let bal=getBalance();
+ if(bet>bal){alert('Not enough balance');return;}
+
+ const game=document.getElementById('game').value;
+ let res;
+ if(game==='coin')res=playCoin(bet);
+ else if(game==='roulette')res=playRoulette(bet);
+ else res=playSlots(bet);
+
+ const newBal=bal+res.delta;
+ setBalance(newBal);
+
+ const entry={t:Date.now(),game,bet,delta:res.delta,result:res.result};
+ addHistory(entry);
+
+ resultEl.textContent=`${res.result} — ${res.delta>0?'+':''}${res.delta.toFixed(6)} AdAu`;
+ resultEl.style.color=res.delta>=0?'#0f0':'#f33';
+
+ loadHistory();
+};
+
+// ---- Clear history ----
+document.getElementById('clearBtn').onclick=()=>{
+ if(!confirm('Clear casino history?'))return;
+ const key='wallet_history_'+device;
+ localStorage.setItem(key,'[]');
+ loadHistory();
+};
+
+// ---- Init display ----
+setInterval(()=>{setBalance(getBalance());loadHistory();},1000);
+setBalance(getBalance());
+loadHistory();
+</script>
+</body>
+</html>
