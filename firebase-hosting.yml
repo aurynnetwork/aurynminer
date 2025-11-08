@@ -31,3 +31,6 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
           channelId: live
           projectId: auryn-miner
+          git add .github/workflows/firebase-hosting.yml
+git commit -m "Add Firebase Hosting workflow"
+git push
